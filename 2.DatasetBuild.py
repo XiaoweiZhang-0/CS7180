@@ -5,7 +5,7 @@ with open('subset.json', 'r') as f:
     data = json.load(f)
 
 # filter out all secret videos
-data = [entry for entry in data if not entry.get('secret', False)]
+data = [entry for entry in data if (not entry.get('secret', False) and not entry.get('forFriend', False))]
 print(f"✅ Videos after filtering (only public): {len(data)}")
 
 df = pd.json_normalize(data, sep='.')
@@ -17,7 +17,10 @@ df_selected = df[[
     'createTime',
     'video.duration',
     'author.verified',
-    'music.title',
+    'music.id',
+    'video.width',
+    'video.height',
+    'video.ratio',
     'stats.playCount',
     'stats.diggCount',
     'stats.commentCount',
