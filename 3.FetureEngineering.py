@@ -20,6 +20,12 @@ df['weekday'] = pd.to_datetime(df['createTime']).dt.weekday
 # Flag if music title includes 'original sound'
 df['is_original_sound'] = df['music.title'].astype(str).apply(lambda x: int('original sound' in x.lower()))
 
+# TODO:
+# 1. Description: change length to transformer evaluated attitude: positive, negative, neutral
+# 2. Music: music id
+# 3. Aspect ratio: video.width, video.height
+# 4. Video resolution
+
 # Feature matrix X with added hashtagFreqFeature
 X = df[[
     'video.duration',
