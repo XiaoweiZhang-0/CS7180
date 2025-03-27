@@ -7,6 +7,10 @@ from collections import Counter
 with open('subset.json', 'r') as f:
     data = json.load(f)
 
+# filter out all secret videos
+data = [entry for entry in data if not entry.get('secret', False)]
+print(f"✅ Videos after filtering (only public): {len(data)}")
+
 df = pd.json_normalize(data, sep='.')
 
 # Select features

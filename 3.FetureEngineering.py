@@ -29,7 +29,6 @@ X = df[[
     'hour',
     'weekday',
     'is_original_sound',
-    'hashtagFreqFeature',
     'stats.diggCount',
     'stats.commentCount',
     'stats.shareCount'
@@ -43,11 +42,11 @@ engagement_cols = [
     'stats.shareCount'
 ]
 
-# Normalize engagement columns
+########################
 scaler = MinMaxScaler()
 df_scaled = pd.DataFrame(scaler.fit_transform(df[engagement_cols]), columns=['play', 'digg', 'comment', 'share'])
 
-# Compute weighted engagement score
+##########################
 df['engagement_score'] = (
     0.4 * df_scaled['play'] +
     0.3 * df_scaled['digg'] +
