@@ -20,10 +20,7 @@ X = df[[
     'verified',
     'hour',
     'weekday',
-    'is_original_sound',
-    'stats.diggCount',
-    'stats.commentCount',
-    'stats.shareCount'
+    'is_original_sound'
 ]]
 
 # build a target variable y by combining 4 features with different weights
@@ -36,11 +33,9 @@ engagement_cols = [
     'stats.shareCount'
 ]
 
-########################
 scaler = MinMaxScaler()
 df_scaled = pd.DataFrame(scaler.fit_transform(df[engagement_cols]), columns=['play', 'digg', 'comment', 'share'])
 
-##########################
 df['engagement_score'] = (
     0.4 * df_scaled['play'] +
     0.3 * df_scaled['digg'] +
