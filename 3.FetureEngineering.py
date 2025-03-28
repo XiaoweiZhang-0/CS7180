@@ -32,6 +32,7 @@ X = df[[
     'hour',
     'weekday',
     'music_id',
+    'hashtag_freq_feature',
     # 'is_original_sound'
 ]]
 
