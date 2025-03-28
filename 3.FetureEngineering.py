@@ -4,7 +4,9 @@ df = pd.read_csv('tiktok_dataset.csv')
 
 df['desc_len'] = df['desc'].astype(str).apply(len)
 
-df['num_hashtags'] = df['desc'].astype(str).str.count('#')
+df['aspect_ratio'] = df['video.height']/['video.width']
+
+df['resolution'] = df['video.ratio']
 
 df['verified'] = df['author.verified'].astype(int)
 
@@ -22,11 +24,11 @@ df['is_original_sound'] = df['music.title'].astype(str).apply(lambda x: int('ori
 X = df[[
     'video.duration',
     'desc_len',
-    'num_hashtags',
     'verified',
     'hour',
     'weekday',
-    'is_original_sound'
+    'aspect_ratio',
+    'resolution'
 ]]
 
 # build a target variable y by combining 4 features with different weights
