@@ -23,18 +23,23 @@ df['music_id'] = df['music.id'].astype(str)
 # 3. Aspect ratio: video.width, video.height
 # 4. Video resolution
 
-# Feature matrix X with added hashtagFreqFeature
-X = df[[
-    'video.duration',
-    # 'desc_len',
-    # 'num_hashtags',
-    'verified',
-    'hour',
-    'weekday',
-    'music_id',
-    'hashtag_freq_feature',
-    # 'is_original_sound'
-]]
+# Feature matrix X by dropping the target variable and unnecessary columns
+# and keeping only relevant features
+X = df.drop(columns=[
+    'id',
+    'desc',
+    'createTime',
+    'author.verified',
+    'music.id',
+    'video.width',
+    'video.height',
+    'video.ratio',
+    'stats.playCount',
+    'stats.diggCount',
+    'stats.commentCount',
+    'stats.shareCount',
+    'hashtags', 
+])
 
 # Engagement-related columns
 engagement_cols = [
@@ -67,3 +72,5 @@ y.to_csv('y_target.csv', index=False)
 print("✅")
 print(f"X shape: {X.shape}")
 print(f"y shape: {y.shape}")
+
+print(X.head())
