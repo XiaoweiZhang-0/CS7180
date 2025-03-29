@@ -36,10 +36,10 @@ def evaluate_model(name, y_test, y_pred):
 # === 4. Initialize and evaluate models ===
 results = []
 
-# (1) Gradient Boosting
-gb_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
-gb_model.fit(X_train, y_train)
-results.append(evaluate_model("GradientBoosting", y_test, gb_model.predict(X_test)))
+# # (1) Gradient Boosting
+# gb_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
+# gb_model.fit(X_train, y_train)
+# results.append(evaluate_model("GradientBoosting", y_test, gb_model.predict(X_test)))
 
 # # (2) Random Forest
 # rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -48,17 +48,17 @@ results.append(evaluate_model("GradientBoosting", y_test, gb_model.predict(X_tes
 
 # # (3) Combined: GradientBoosting + RandomForest not directly combinable, so we just compare them separately
 
-# # (4) Stacking: Decision Tree + Random Forest -> RidgeCV
-# stack_model = StackingRegressor(
-#     estimators=[
-#         ('dt', DecisionTreeRegressor(random_state=42)),
-#         ('rf', RandomForestRegressor(n_estimators=50, random_state=42))
-#     ],
-#     final_estimator=RidgeCV(),
-#     passthrough=True
-# )
-# stack_model.fit(X_train, y_train)
-# results.append(evaluate_model("StackingRegressor", y_test, stack_model.predict(X_test)))
+# (4) Stacking: Decision Tree + Random Forest -> RidgeCV
+stack_model = StackingRegressor(
+    estimators=[
+        ('dt', DecisionTreeRegressor(random_state=42)),
+        ('rf', RandomForestRegressor(n_estimators=50, random_state=42))
+    ],
+    final_estimator=RidgeCV(),
+    passthrough=True
+)
+stack_model.fit(X_train, y_train)
+results.append(evaluate_model("StackingRegressor", y_test, stack_model.predict(X_test)))
 
 # # (5) HistGradientBoosting (Fastest native boosting in sklearn)
 # hgb_model = HistGradientBoostingRegressor(max_iter=100, random_state=42)
