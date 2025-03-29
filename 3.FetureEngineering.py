@@ -6,6 +6,9 @@ df = pd.read_csv('tiktok_dataset.csv')
 
 # df['desc_len'] = df['desc'].astype(str).apply(len)
 
+df['aspect_ratio'] = df['video.height']/['video.width']
+
+df['resolution'] = df['video.ratio']
 # df['num_hashtags'] = df['desc'].astype(str).str.count('#')
 
 # Convert verified to int
