@@ -28,7 +28,7 @@ def extract_raw_fields(item):
         "video_duration": item.get("video", {}).get("duration"),
 
         # for features of music
-        "music_id": item.get("music", {}).get("id"),
+        "music_title": item.get("music", {}).get("title"),
 
         # for egagment score
         "playCount": item.get("stats", {}).get("playCount", 0),
