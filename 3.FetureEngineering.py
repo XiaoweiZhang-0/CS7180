@@ -1,22 +1,57 @@
+import json
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from collections import Counter
+import ast
+
 
 # Load preprocessed dataset
 df = pd.read_csv('tiktok_dataset.csv')
 
-# df['desc_len'] = df['desc'].astype(str).apply(len)
+# Feature: desc_length
+df['desc_length'] = df['desc'].astype(str).apply(len)
 
-df['aspect_ratio'] = df['video.height']/['video.width']
+# Feature: has_trending_hashtag / num_trending_hashtags
+df['hashtags'] = df['hashtags'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
 
-df['resolution'] = df['video.ratio']
-# df['num_hashtags'] = df['desc'].astype(str).str.count('#')
+# flatten all hashtags to lowercase
+all_hashtags = [tag.lower() for tags in df['hashtags'] for tag in tags]
+hashtag_counts = Counter(all_hashtags)
+TOP_PERCENT = 0.05
+top_n = max(1, int(len(hashtag_counts) * TOP_PERCENT))
+popular_hashtags = set([tag for tag, _ in hashtag_counts.most_common(top_n)])
+
+def count_popular_hashtags(tags):
+    tags_lower = [tag.lower() for tag in tags]
+    num = sum(1 for tag in tags_lower if tag in popular_hashtags)
+    return pd.Series({
+        "has_trending_hashtag": int(num > 0),
+        "num_trending_hashtags": num
+    })
+
+df[['has_trending_hashtag', 'num_trending_hashtags']] = df['hashtags'].apply(count_popular_hashtags)
+
+# Feature: is_trending_music
+music_counts = df['music_title'].value_counts()
+music_top_n = max(1, int(len(music_counts) * TOP_PERCENT))
+popular_music_titles = set(music_counts.head(music_top_n).index)
+df['is_trending_music'] = df['music_title'].apply(lambda x: int(x in popular_music_titles))
+
+# Feature: has_mention
+def has_mention(text_extra):
+    try:
+        parsed = json.loads(text_extra.replace("'", '"'))
+        return int(any(tag.get("userUniqueId") for tag in parsed if isinstance(tag, dict)))
+    except:
+        return 0
+
+df['has_mention'] = df['textExtra'].apply(has_mention)
+
+# Feature: hour_posted
+df['hour_posted'] = pd.to_datetime(df['createTime']).dt.hour
 
 # Convert verified to int
 df['verified'] = df['author.verified'].astype(int)
-
-# Extract hour and weekday from createTime
-df['hour'] = pd.to_datetime(df['createTime']).dt.hour
-df['weekday'] = pd.to_datetime(df['createTime']).dt.weekday
 
 df['music_id'] = df['music.id'].astype(str)
 
@@ -28,21 +63,15 @@ df['music_id'] = df['music.id'].astype(str)
 
 # Feature matrix X with added hashtagFreqFeature
 X = df[[
-    'video.duration',
-    'desc_len',
+    'desc_length',
+    'has_trending_hashtag',
+    'num_trending_hashtags',
+    'is_trending_music',
+    'has_mention',
+    'hour_posted',
+    'video_duration',
+
     'verified',
-    'hour',
-    'weekday',
-    'aspect_ratio',
-    'resolution'
-    # 'desc_len',
-    # 'num_hashtags',
-    'verified',
-    'hour',
-    'weekday',
-    'music_id',
-    'hashtag_freq_feature',
-    # 'is_original_sound'
 ]]
 
 # Engagement-related columns
