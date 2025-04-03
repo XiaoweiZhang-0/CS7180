@@ -3,6 +3,10 @@ import pandas as pd
 import re
 from collections import Counter
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.feature_selection import mutual_info_regression
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Load and flatten JSON
 with open('first_200000_entries.json', 'r') as f:
@@ -28,12 +32,21 @@ df_selected = df[[
     'author.signature',
     'author.relation',
     # Challenges features
-    'challenges'
+    'challenges',
+    # Stats features
+    'stats.playCount',
+    'stats.diggCount',
+    'stats.commentCount',
+    'stats.shareCount'
 ]].copy()
 
 # Fill missing values with appropriate defaults
 df_selected['author.verified'] = df_selected['author.verified'].fillna(False).astype(int)
 df_selected['author.relation'] = df_selected['author.relation'].fillna(0)
+df_selected['stats.playCount'] = df_selected['stats.playCount'].fillna(0).astype(int)
+df_selected['stats.diggCount'] = df_selected['stats.diggCount'].fillna(0).astype(int)
+df_selected['stats.commentCount'] = df_selected['stats.commentCount'].fillna(0).astype(int)
+df_selected['stats.shareCount'] = df_selected['stats.shareCount'].fillna(0).astype(int)
 
 # 1. Primary Author Features
 df_selected['author_signature_len'] = df_selected['author.signature'].astype(str).apply(len)
@@ -66,23 +79,74 @@ df_selected['challenges_with_thumb'] = challenge_features.apply(lambda x: x[2])
 df_selected['avg_challenge_desc_length'] = challenge_features.apply(lambda x: x[3])
 df_selected['challenge_completeness'] = challenge_features.apply(lambda x: x[4])
 
-# 3. Combined Features
-df_selected['author_engagement_score'] = (
-    df_selected['author.verified'] * 2 +
-    df_selected['author_signature_len'] / 100 +  # Normalized by dividing by 100
-    df_selected['author_name_len'] / 50  # Normalized by dividing by 50
+# 3. Engagement Score
+# Create a DataFrame with just the stats columns for scaling
+stats_df = df_selected[['stats.playCount', 'stats.diggCount', 'stats.commentCount', 'stats.shareCount']]
+stats_df.columns = ['play', 'digg', 'comment', 'share']
+
+# Scale the stats
+scaler = MinMaxScaler()
+df_scaled = pd.DataFrame(
+    scaler.fit_transform(stats_df),
+    columns=stats_df.columns
 )
 
-df_selected['challenge_engagement_score'] = (
-    df_selected['num_challenges'] +
-    df_selected['challenges_with_desc'] * 1.5 +  # Weight more for challenges with descriptions
-    df_selected['challenges_with_thumb'] * 1.2 +  # Weight more for challenges with thumbnails
-    df_selected['challenge_completeness'] * 2  # Weight more for complete challenges
+# Calculate engagement score with specified weights
+df_selected['engagement_score'] = (
+    0.4 * df_scaled['play'] +
+    0.3 * df_scaled['digg'] +
+    0.2 * df_scaled['comment'] +
+    0.1 * df_scaled['share']
 )
 
 # Fill any remaining missing values with appropriate defaults
 numeric_columns = df_selected.select_dtypes(include=[np.number]).columns
 df_selected[numeric_columns] = df_selected[numeric_columns].fillna(df_selected[numeric_columns].median())
+
+# 4. Analyze feature relationships with engagement score
+features_for_analysis = [
+    'author.verified',
+    'author_signature_len',
+    'author_name_len',
+    'num_challenges',
+    'challenges_with_desc',
+    'challenges_with_thumb',
+    'avg_challenge_desc_length',
+    'challenge_completeness'
+]
+
+# Calculate correlations
+correlations = df_selected[features_for_analysis + ['engagement_score']].corr()['engagement_score'].sort_values(ascending=False)
+print("\nFeature Correlations with Engagement Score:")
+print(correlations)
+
+# Calculate Mutual Information
+X = df_selected[features_for_analysis]
+y = df_selected['engagement_score']
+mi_scores = mutual_info_regression(X, y)
+mi_series = pd.Series(mi_scores, index=features_for_analysis).sort_values(ascending=False)
+print("\nMutual Information with Engagement Score:")
+print(mi_series)
+
+# Create visualizations
+plt.figure(figsize=(15, 10))
+
+# Correlation Plot
+plt.subplot(2, 1, 1)
+correlations[:-1].plot(kind='bar')
+plt.title('Feature Correlations with Engagement Score')
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+
+# Mutual Information Plot
+plt.subplot(2, 1, 2)
+mi_series.plot(kind='bar')
+plt.title('Mutual Information with Engagement Score')
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+
+plt.savefig('feature_importance.png')
+plt.close()
 
 print("\nSelected features:")
 print(df_selected.columns.tolist())
