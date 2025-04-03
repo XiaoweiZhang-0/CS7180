@@ -15,16 +15,11 @@ features = [
     # Primary Author Features
     'author.verified',
     'author_signature_len',
+    'author_name_len',    
     'author_name_len',
-    # Challenge Features
-    'num_challenges',
-    'challenges_with_desc',
-    'challenges_with_thumb',
     'avg_challenge_desc_length',
-    'challenge_completeness',
-    # Combined Scores
-    'author_engagement_score',
-    'challenge_engagement_score'
+    'num_challenges',
+    'challenge_completeness'
 ]
 
 X = df[features]
@@ -76,11 +71,3 @@ correlations.sort(key=lambda x: abs(x[2]), reverse=True)
 for f1, f2, corr in correlations[:10]:
     print(f"{f1} - {f2}: {corr:.3f}")
 
-# Print top features by mutual information
-print("\nTop Features by Mutual Information (with challenge_engagement_score):")
-print(mi_series.nlargest(5))
-
-# Calculate feature importance based on average absolute correlation
-feature_importance = abs(correlation_matrix).mean().sort_values(ascending=False)
-print("\nFeature Importance (Based on Average Absolute Correlation):")
-print(feature_importance.head()) 

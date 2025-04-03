@@ -5,7 +5,6 @@ from collections import Counter
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.feature_selection import mutual_info_regression
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Load and flatten JSON
@@ -128,25 +127,6 @@ mi_series = pd.Series(mi_scores, index=features_for_analysis).sort_values(ascend
 print("\nMutual Information with Engagement Score:")
 print(mi_series)
 
-# Create visualizations
-plt.figure(figsize=(15, 10))
-
-# Correlation Plot
-plt.subplot(2, 1, 1)
-correlations[:-1].plot(kind='bar')
-plt.title('Feature Correlations with Engagement Score')
-plt.xticks(rotation=45, ha='right')
-plt.tight_layout()
-
-# Mutual Information Plot
-plt.subplot(2, 1, 2)
-mi_series.plot(kind='bar')
-plt.title('Mutual Information with Engagement Score')
-plt.xticks(rotation=45, ha='right')
-plt.tight_layout()
-
-plt.savefig('feature_importance.png')
-plt.close()
 
 print("\nSelected features:")
 print(df_selected.columns.tolist())
