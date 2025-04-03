@@ -6,23 +6,24 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.feature_selection import mutual_info_regression
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 
 # Load and flatten JSON
-with open('first_200000_entries.json', 'r') as f:
+with open('subset.json', 'r') as f:
     data = json.load(f)
 
 # filter out all secret videos
-data = [entry for entry in data if (not entry.get('secret', False) and not entry.get('forFriend', False))]
-print(f"✅ Videos after filtering (only public): {len(data)}")
+filtered = [entry for entry in data if not entry.get("secret", False) and not entry.get("forFriend", False)]
+print(f"✅ Public videos retained: {len(filtered)}")
 
 df = pd.json_normalize(data, sep='.')
 
-# Print available columns
-print("\nAvailable columns:")
-print(df.columns.tolist())
-
 # Select features
 df_selected = df[[
+    # Video
     'id',
     # Author features
     'author.verified',
@@ -33,6 +34,15 @@ df_selected = df[[
     # Challenges features
     'challenges',
     # Stats features
+    'desc',
+    'textExtra',
+    'createTime',
+    'video.duration',
+    
+    # Music
+    'music.title',
+      
+    # Popularity
     'stats.playCount',
     'stats.diggCount',
     'stats.commentCount',
@@ -133,4 +143,5 @@ print(df_selected.columns.tolist())
 
 # Save to CSV
 df_selected.to_csv('tiktok_dataset.csv', index=False)
-print("✅")
+print("✅ Raw dataset saved as tiktok_dataset.csv")
+print(df_selected.head(3))
