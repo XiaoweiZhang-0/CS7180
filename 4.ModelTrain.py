@@ -9,12 +9,22 @@ from sklearn.ensemble import (
 )
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import RidgeCV
+import pickle
 
 # === 1. Load dataset ===
 # df = pd.read_csv('tiktok_dataset_with_engagement_score.csv')
 
 X = pd.read_csv('X_features.csv')
 y = pd.read_csv('y_target.csv')
+
+# Remove 'resolution' column as it contains non-numeric values ('720p', '480p')
+if 'resolution' in X.columns:
+    X = X.drop(columns=['resolution'])
+    print("Removed 'resolution' column")
+
+# Convert y to a 1D array
+y = y.values.ravel()
+print(f"Converted y to 1D array with shape: {y.shape}")
 
 # === 2. Train-test split ===
 X_train, X_test, y_train, y_test = train_test_split(
@@ -58,6 +68,13 @@ stack_model = StackingRegressor(
     passthrough=True
 )
 stack_model.fit(X_train, y_train)
+
+# Save the model to pickle file
+with open('model.pkl', 'wb') as f:
+    pickle.dump(stack_model, f)
+
+print("✅ Model has been saved to model.pkl")   
+    
 results.append(evaluate_model("StackingRegressor", y_test, stack_model.predict(X_test)))
 
 # # (5) HistGradientBoosting (Fastest native boosting in sklearn)
