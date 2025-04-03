@@ -1,8 +1,6 @@
 import json
 import pandas as pd
 import re
-from collections import Counter
-
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -13,52 +11,50 @@ with open('subset.json', 'r') as f:
     data = json.load(f)
 
 # filter out all secret videos
-data = [entry for entry in data if (not entry.get('secret', False) and not entry.get('forFriend', False))]
-print(f"✅ Videos after filtering (only public): {len(data)}")
+filtered = [entry for entry in data if not entry.get("secret", False) and not entry.get("forFriend", False)]
+print(f"✅ Public videos retained: {len(filtered)}")
 
 df = pd.json_normalize(data, sep='.')
 
 # Select features
 df_selected = df[[
+    # Video
     'id',
     'desc',
+    'textExtra',
     'createTime',
     'video.duration',
-    'author.verified',
-    'music.id',
-    'video.width',
-    'video.height',
-    'video.ratio',
+    
+    # Music
+    'music.title',
+      
+    # Popularity
     'stats.playCount',
     'stats.diggCount',
     'stats.commentCount',
     'stats.shareCount'
 ]].copy()
 
-# Convert timestamp
-df_selected['createTime'] = pd.to_datetime(df_selected['createTime'], unit='s')
+# # Extract hashtags using regex
+# def extract_hashtags(text):
+#     return re.findall(r'#\w+', str(text))
 
-# Extract hashtags using regex
-def extract_hashtags(text):
-    return re.findall(r'#\w+', str(text))
+# df_selected['hashtags'] = df_selected['desc'].apply(extract_hashtags)
 
-df_selected['hashtags'] = df_selected['desc'].apply(extract_hashtags)
+# # Convert list of hashtags into space-separated strings
+# df_selected['hashtags_str'] = df_selected['hashtags'].apply(lambda x: ' '.join(x))
 
-
-# Convert list of hashtags into space-separated strings
-df_selected['hashtags_str'] = df_selected['hashtags'].apply(lambda x: ' '.join(x))
-
-# Apply TF-IDF Vectorization
-vectorizer = TfidfVectorizer(max_features=100)  # Limit to top 100 important hashtags
-tfidf_matrix = vectorizer.fit_transform(df_selected['hashtags_str']).toarray()
+# # Apply TF-IDF Vectorization
+# vectorizer = TfidfVectorizer(max_features=100)  # Limit to top 100 important hashtags
+# tfidf_matrix = vectorizer.fit_transform(df_selected['hashtags_str']).toarray()
 
 
-# Convert to DataFrame
-hashtag_features = pd.DataFrame(tfidf_matrix, columns=vectorizer.get_feature_names_out())
+# # Convert to DataFrame
+# hashtag_features = pd.DataFrame(tfidf_matrix, columns=vectorizer.get_feature_names_out())
 
-# Merge with original DataFrame
-df_selected = df_selected.drop(columns=['hashtags_str'])  # Drop temp string column
-df_selected = pd.concat([df_selected, hashtag_features], axis=1)
+# # Merge with original DataFrame
+# df_selected = df_selected.drop(columns=['hashtags_str'])  # Drop temp string column
+# df_selected = pd.concat([df_selected, hashtag_features], axis=1)
 
 
 # # Flatten and count hashtags
@@ -110,4 +106,5 @@ df_selected = pd.concat([df_selected, hashtag_features], axis=1)
 
 # Save to CSV
 df_selected.to_csv('tiktok_dataset.csv', index=False)
-print("✅")
+print("✅ Raw dataset saved as tiktok_dataset.csv")
+print(df_selected.head(3))

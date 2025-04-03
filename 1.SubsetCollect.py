@@ -7,5 +7,5 @@ with open('first_200000_entries.json') as f:
 subset = data[:200000]
 
 # Save to a new file
-with open('subset.json', 'w') as out_file:
+with open('subset_10000.json', 'w') as out_file:
     json.dump(subset, out_file, indent=2)  # indent=2 makes it pretty

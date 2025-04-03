@@ -1,48 +1,71 @@
+import json
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from collections import Counter
+import ast
+
 
 # Load preprocessed dataset
 df = pd.read_csv('tiktok_dataset.csv')
 
-# df['desc_len'] = df['desc'].astype(str).apply(len)
+# Feature: desc_length
+df['desc_length'] = df['desc'].astype(str).apply(len)
 
-df['aspect_ratio'] = df['video.height']/df['video.width']
+# Feature: has_trending_hashtag / num_trending_hashtags(top 5%)
+def extract_hashtags_from_textExtra(text_extra):
+    try:
+        if isinstance(text_extra, str):
+            text_extra = json.loads(text_extra.replace("'", '"'))
+        return [
+            tag.get("hashtagName", "").lower()
+            for tag in text_extra
+            if tag.get("type") == 1 and tag.get("hashtagName")
+        ]
+    except:
+        return []
 
-df['resolution'] = df['video.ratio']
-# df['num_hashtags'] = df['desc'].astype(str).str.count('#')
+df['hashtags'] = df['textExtra'].apply(extract_hashtags_from_textExtra)
 
-# Convert verified to int
-df['verified'] = df['author.verified'].astype(int)
+# flatten all hashtags to lowercase
+all_hashtags = [tag.lower() for tags in df['hashtags'] for tag in tags]
+hashtag_counts = Counter(all_hashtags)
+TOP_PERCENT = 0.05
+top_n = max(1, int(len(hashtag_counts) * TOP_PERCENT))
+popular_hashtags = set([tag for tag, _ in hashtag_counts.most_common(top_n)])
 
-# Extract hour and weekday from createTime
-df['hour'] = pd.to_datetime(df['createTime']).dt.hour
-df['weekday'] = pd.to_datetime(df['createTime']).dt.weekday
+# Feature: is_trending_music(top 5%)
+music_counts = df['music_title'].value_counts()
+music_top_n = max(1, int(len(music_counts) * TOP_PERCENT))
+popular_music_titles = set(music_counts.head(music_top_n).index)
+df['is_trending_music'] = df['music_title'].apply(lambda x: int(x in popular_music_titles))
 
-df['music_id'] = df['music.id'].astype(str)
+# Feature: has_mention
+def has_mention(text_extra):
+    try:
+        parsed = json.loads(text_extra.replace("'", '"'))
+        return int(any(tag.get("userUniqueId") for tag in parsed if isinstance(tag, dict)))
+    except:
+        return 0
 
-# TODO:
-# 1. Description: change length to transformer evaluated attitude: positive, negative, neutral
-# 2. Music: music id
-# 3. Aspect ratio: video.width, video.height
-# 4. Video resolution
+df['has_mention'] = df['textExtra'].apply(has_mention)
 
-# Feature matrix X by dropping the target variable and unnecessary columns
+# Feature: hour_posted
+df['hour_posted'] = pd.to_datetime(df['createTime']).dt.hour
+
+
+# Feature matrix X by return the target variables
 # and keeping only relevant features
-X = df.drop(columns=[
-    'id',
-    'desc',
-    'createTime',
-    'author.verified',
-    'music.id',
-    'video.width',
-    'video.height',
-    'video.ratio',
-    'stats.playCount',
-    'stats.diggCount',
-    'stats.commentCount',
-    'stats.shareCount',
-    'hashtags', 
-])
+X = df[[
+    'desc_length',
+    'has_trending_hashtag',
+    'num_trending_hashtags',
+    'is_trending_music',
+    'has_mention',
+    'hour_posted',
+    'video_duration',
+
+    'verified',
+]]
 
 ## if column is numeric, replace NaN values in the feature matrix with mean of the column
 for col in X.select_dtypes(include=['float64', 'int64']).columns:
