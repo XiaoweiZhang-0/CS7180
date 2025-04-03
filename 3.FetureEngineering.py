@@ -11,8 +11,20 @@ df = pd.read_csv('tiktok_dataset.csv')
 # Feature: desc_length
 df['desc_length'] = df['desc'].astype(str).apply(len)
 
-# Feature: has_trending_hashtag / num_trending_hashtags
-df['hashtags'] = df['hashtags'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
+# Feature: has_trending_hashtag / num_trending_hashtags(top 5%)
+def extract_hashtags_from_textExtra(text_extra):
+    try:
+        if isinstance(text_extra, str):
+            text_extra = json.loads(text_extra.replace("'", '"'))
+        return [
+            tag.get("hashtagName", "").lower()
+            for tag in text_extra
+            if tag.get("type") == 1 and tag.get("hashtagName")
+        ]
+    except:
+        return []
+
+df['hashtags'] = df['textExtra'].apply(extract_hashtags_from_textExtra)
 
 # flatten all hashtags to lowercase
 all_hashtags = [tag.lower() for tags in df['hashtags'] for tag in tags]
@@ -21,17 +33,7 @@ TOP_PERCENT = 0.05
 top_n = max(1, int(len(hashtag_counts) * TOP_PERCENT))
 popular_hashtags = set([tag for tag, _ in hashtag_counts.most_common(top_n)])
 
-def count_popular_hashtags(tags):
-    tags_lower = [tag.lower() for tag in tags]
-    num = sum(1 for tag in tags_lower if tag in popular_hashtags)
-    return pd.Series({
-        "has_trending_hashtag": int(num > 0),
-        "num_trending_hashtags": num
-    })
-
-df[['has_trending_hashtag', 'num_trending_hashtags']] = df['hashtags'].apply(count_popular_hashtags)
-
-# Feature: is_trending_music
+# Feature: is_trending_music(top 5%)
 music_counts = df['music_title'].value_counts()
 music_top_n = max(1, int(len(music_counts) * TOP_PERCENT))
 popular_music_titles = set(music_counts.head(music_top_n).index)
@@ -50,18 +52,9 @@ df['has_mention'] = df['textExtra'].apply(has_mention)
 # Feature: hour_posted
 df['hour_posted'] = pd.to_datetime(df['createTime']).dt.hour
 
-# Convert verified to int
-df['verified'] = df['author.verified'].astype(int)
 
-df['music_id'] = df['music.id'].astype(str)
-
-# TODO:
-# 1. Description: change length to transformer evaluated attitude: positive, negative, neutral
-# 2. Music: music id
-# 3. Aspect ratio: video.width, video.height
-# 4. Video resolution
-
-# Feature matrix X with added hashtagFreqFeature
+# Feature matrix X by return the target variables
+# and keeping only relevant features
 X = df[[
     'desc_length',
     'has_trending_hashtag',
@@ -74,6 +67,17 @@ X = df[[
     'verified',
 ]]
 
+## if column is numeric, replace NaN values in the feature matrix with mean of the column
+for col in X.select_dtypes(include=['float64', 'int64']).columns:
+    if X[col].isnull().any():
+        mean_value = X[col].mean()
+        X[col].fillna(mean_value, inplace=True)
+## else if column is categorical, replace NaN values with the most frequent value (mode)
+for col in X.select_dtypes(include=['object']).columns:
+    if X[col].isnull().any():
+        # Replace NaN with the most frequent value (mode)
+        mode_value = X[col].mode()[0] if not X[col].mode().empty else ''
+        X[col].fillna(mode_value, inplace=True)
 # Engagement-related columns
 engagement_cols = [
     'stats.playCount',
@@ -94,8 +98,38 @@ df['engagement_score'] = (
     0.1 * df_scaled['share']
 )
 
+
+## transform the engagement score into four categories: highly popular, popular, average, and low engagement
+# Define bins and labels for categorizing engagement score
+# bins should be defined based on the distribution of engagement scores
+import numpy as np
+# Check the distribution of engagement scores
+print("Engagement Score Distribution:")
+print(df['engagement_score'].describe())
+# Use quantiles to define bins
+# Use np.percentile to get quantile-based bins
+quantiles = np.percentile(df['engagement_score'].dropna(), [0, 25, 50, 75, 100])
+print("Quantile-based bins for engagement score:")
+print(quantiles)
+# Ensure bins are sorted
+if not np.all(np.diff(quantiles) > 0):
+    raise ValueError("Quantile bins are not sorted properly.")
+bins = quantiles
+if len(bins) != 5:
+    raise ValueError("There should be exactly 4 bins for categorization (low, average, popular, highly popular).")
+
+
+labels = ['low', 'average', 'popular', 'highly popular']
+# Use pd.cut to categorize the engagement score
+df['engagement_category'] = pd.cut(
+    df['engagement_score'],
+    bins=bins,
+    labels=labels,
+    include_lowest=True
+)
+
 # Target variable
-y = df['engagement_score']
+y = df['engagement_category'].astype(str)  # Convert to string for classification
 
 # Save updated dataset with engagement score
 df.to_csv('tiktok_dataset_with_engagement_score.csv', index=False)
