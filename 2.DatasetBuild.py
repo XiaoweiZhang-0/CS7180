@@ -2,7 +2,6 @@ import json
 import pandas as pd
 import re
 from collections import Counter
-import numpy as np
 
 # Load and flatten JSON
 with open('first_200000_entries.json', 'r') as f:
@@ -35,57 +34,29 @@ df_selected = df[[
 df_selected['author.verified'] = df_selected['author.verified'].fillna(False).astype(int)
 df_selected['author.relation'] = df_selected['author.relation'].fillna(0)
 
-# 1. Primary Author Features
-df_selected['author_signature_len'] = df_selected['author.signature'].astype(str).apply(len)
-df_selected['author_name_len'] = df_selected['author.nickname'].astype(str).apply(len)
+# Extract hashtags using regex
+def extract_hashtags(text):
+    return re.findall(r'#\w+', str(text))
 
-# 2. Enhanced Challenge Features
-def extract_challenge_info(challenges):
-    if not isinstance(challenges, list):
-        return 0, 0, 0, 0, 0
-    
-    num_challenges = len(challenges)
-    challenges_with_desc = sum(1 for c in challenges if c.get('desc'))
-    challenges_with_thumb = sum(1 for c in challenges if c.get('profileThumb'))
-    
-    # Calculate average description length
-    desc_lengths = [len(str(c.get('desc', ''))) for c in challenges]
-    avg_desc_length = sum(desc_lengths) / len(desc_lengths) if desc_lengths else 0
-    
-    # Calculate challenge completeness (percentage of challenges with both desc and thumb)
-    complete_challenges = sum(1 for c in challenges if c.get('desc') and c.get('profileThumb'))
-    challenge_completeness = complete_challenges / num_challenges if num_challenges > 0 else 0
-    
-    return num_challenges, challenges_with_desc, challenges_with_thumb, avg_desc_length, challenge_completeness
+df_selected['hashtags'] = df_selected['desc'].apply(extract_hashtags)
 
-# Extract challenge features
-challenge_features = df_selected['challenges'].apply(extract_challenge_info)
-df_selected['num_challenges'] = challenge_features.apply(lambda x: x[0])
-df_selected['challenges_with_desc'] = challenge_features.apply(lambda x: x[1])
-df_selected['challenges_with_thumb'] = challenge_features.apply(lambda x: x[2])
-df_selected['avg_challenge_desc_length'] = challenge_features.apply(lambda x: x[3])
-df_selected['challenge_completeness'] = challenge_features.apply(lambda x: x[4])
+# Flatten and count hashtags
+all_hashtags = [tag.lower() for tags in df_selected['hashtags'] for tag in tags]
+hashtag_counts = Counter(all_hashtags)
 
-# 3. Combined Features
-df_selected['author_engagement_score'] = (
-    df_selected['author.verified'] * 2 +
-    df_selected['author_signature_len'] / 100 +  # Normalized by dividing by 100
-    df_selected['author_name_len'] / 50  # Normalized by dividing by 50
-)
+# Build a ranking dictionary {hashtag: rank}
+sorted_hashtags = [tag for tag, _ in hashtag_counts.most_common()]
+hashtag_rank = {tag: idx for idx, tag in enumerate(sorted_hashtags)}
 
-df_selected['challenge_engagement_score'] = (
-    df_selected['num_challenges'] +
-    df_selected['challenges_with_desc'] * 1.5 +  # Weight more for challenges with descriptions
-    df_selected['challenges_with_thumb'] * 1.2 +  # Weight more for challenges with thumbnails
-    df_selected['challenge_completeness'] * 2  # Weight more for complete challenges
-)
+# Assign rank of top hashtag in the post (lowest index = most popular)
+def hashtag_freq_feature(tags):
+    tags_lower = [tag.lower() for tag in tags]
+    ranks = [hashtag_rank[tag] for tag in tags_lower if tag in hashtag_rank]
+    return min(ranks) if ranks else 101  # 101 if no known hashtags present
 
-# Fill any remaining missing values with appropriate defaults
-numeric_columns = df_selected.select_dtypes(include=[np.number]).columns
-df_selected[numeric_columns] = df_selected[numeric_columns].fillna(df_selected[numeric_columns].median())
+df_selected['hashtag_freq_feature'] = df_selected['hashtags'].apply(hashtag_freq_feature)
 
-print("\nSelected features:")
-print(df_selected.columns.tolist())
+print(df_selected.head())
 
 # Save to CSV
 df_selected.to_csv('tiktok_dataset.csv', index=False)
