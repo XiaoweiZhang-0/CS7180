@@ -1,3 +1,5 @@
+import pickle
+
 import pandas as pd
 from sklearn.calibration import LabelEncoder
 from sklearn.metrics import f1_score, precision_score, recall_score
@@ -14,6 +16,15 @@ le = LabelEncoder()
 y["engagement_category"] = le.fit_transform(
     y["engagement_category"]
 )  # Ensure y is encoded if categorical
+
+# Remove 'resolution' column as it contains non-numeric values ('720p', '480p')
+if "resolution" in X.columns:
+    X = X.drop(columns=["resolution"])
+    print("Removed 'resolution' column")
+
+# Convert y to a 1D array
+y = y.values.ravel()
+print(f"Converted y to 1D array with shape: {y.shape}")
 
 # === 2. Train-test split ===
 X_train, X_test, y_train, y_test = train_test_split(
@@ -59,5 +70,11 @@ xgb_model = XGBClassifier(
     random_state=42, use_label_encoder=False, eval_metric="mlogloss"
 )
 xgb_model.fit(X_train, y_train.values.ravel())  # ravel to convert y_train to 1D array
-y_pred_xgb = xgb_model.predict(X_test)
-results.append(evaluate_model("XGBoost Classifier", y_test, y_pred_xgb))
+
+# Save the model to pickle file
+with open("model.pkl", "wb") as f:
+    pickle.dump(xgb_model, f)
+
+print("✅ Model has been saved to model.pkl")
+
+results.append(evaluate_model("StackingRegressor", y_test, xgb_model.predict(X_test)))

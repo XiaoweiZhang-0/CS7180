@@ -1,4 +1,5 @@
 *.json
 *.csv
+.venv
 *.jsonl
 .DS_Store
