@@ -94,7 +94,7 @@ X = df[
         "author_name_len",
         "avg_challenge_desc_length",
         "num_challenges",
-        "challenge_completeness",
+        "challenge_completeness"
     ]
 ]
 

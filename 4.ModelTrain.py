@@ -51,7 +51,7 @@ results = []
 from sklearn.ensemble import GradientBoostingClassifier
 
 gb_model = GradientBoostingClassifier(random_state=42)
-gb_model.fit(X_train, y_train.values.ravel())  # ravel to convert y_train to 1D array
+gb_model.fit(X_train, y_train.ravel())  # ravel to convert y_train to 1D array
 y_pred_gb = gb_model.predict(X_test)
 results.append(evaluate_model("Gradient Boosting Classifier", y_test, y_pred_gb))
 
@@ -59,7 +59,7 @@ results.append(evaluate_model("Gradient Boosting Classifier", y_test, y_pred_gb)
 from sklearn.ensemble import RandomForestClassifier
 
 rf_model = RandomForestClassifier(random_state=42, n_estimators=100)
-rf_model.fit(X_train, y_train.values.ravel())  # ravel to convert y_train to 1D array
+rf_model.fit(X_train, y_train.ravel())  # ravel to convert y_train to 1D array
 y_pred_rf = rf_model.predict(X_test)
 results.append(evaluate_model("Random Forest Classifier", y_test, y_pred_rf))
 
@@ -69,7 +69,7 @@ from xgboost import XGBClassifier
 xgb_model = XGBClassifier(
     random_state=42, use_label_encoder=False, eval_metric="mlogloss"
 )
-xgb_model.fit(X_train, y_train.values.ravel())  # ravel to convert y_train to 1D array
+xgb_model.fit(X_train, y_train.ravel())  # ravel to convert y_train to 1D array
 
 # Save the model to pickle file
 with open("model.pkl", "wb") as f:

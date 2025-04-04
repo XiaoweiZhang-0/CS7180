@@ -1,73 +1,80 @@
-import pandas as pd
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
 
-X = pd.read_csv("X_features.csv")
-print(X.columns.tolist())
-
-# Load the trained model
-with open('model.pkl', 'rb') as f:
+# === Load model ===
+with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
-# Define main features to input
-st.title("TikTok Popularity Predictor")
-st.write("Input video features below to predict popularity level:")
+# === Define label decoder ===
+label_decoder = {
+    0: "low",
+    1: "average",
+    2: "popular",
+    3: "highly popular"
+}
 
-# User input form
-duration = st.slider("Video Duration (seconds)", 0, 300, 30)
-aspect_ratio = st.number_input("Aspect Ratio (height / width)", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
-verified = st.selectbox("Is the creator verified?", [0, 1])
-hour = st.slider("Upload Hour (0–23)", 0, 23, 12)
-weekday = st.selectbox("Upload Weekday (0=Mon, 6=Sun)", list(range(7)))
+st.title("🎬 Predict TikTok Video Popularity Level")
+st.markdown("Input video metadata to predict how popular it might be.")
 
-# Build input array for prediction
-# All TF-IDF features default to 0
-all_features = [
-    'video.duration', '30x16', '42s', '4x4diesels', 'art', 'artist', 'ashleyvee', 'atv', 'bagged', 'brandon24v',
-    'brandon24voffroad', 'burnout', 'car', 'cars', 'checkmeoutchallenge', 'chevy', 'clean', 'coldstart',
-    'coronavirus', 'cummins', 'custom', 'diesel', 'dieselcheck', 'dieselgang', 'dieselpower', 'diesels',
-    'dieselsmerica', 'dieseltruck', 'dieseltrucks', 'dieseltrux', 'dodge', 'dontflop', 'dontletthisflop', 'dually',
-    'euro', 'exhaust', 'exotic', 'f250', 'f350', 'florida', 'floridacheck', 'for', 'forces', 'ford', 'forged',
-    'foru', 'foryou', 'foryoupage', 'foyoupage', 'fullsend', 'fyp', 'goodbye2019', 'gotcaught', 'goviral',
-    'hornblasters', 'houston', 'howidothings', 'howiwalk', 'jdm', 'lamborghini', 'lifted', 'liftedtruck',
-    'liftedtruckcheck', 'liftedtrucks', 'liftedtrucksmatter', 'lowered', 'luxury', 'mechanic', 'minivlog',
-    'pavementprincess', 'polaris', 'powerstroke', 'quarantine', 'racetruck', 'ram', 'red', 'rocklights', 'sema',
-    'semafun', 'south', 'southerntruckz', 'speed', 'stance', 'supercar', 'thatswhatilike', 'tires', 'truck',
-    'truckcheck', 'trucklife', 'truckporn', 'trucks', 'viral', 'w2step', 'weld', 'welding', 'wheels', 'work',
-    'xyzbca', 'xyzcba', 'yeeyee', 'youtube', 'aspect_ratio', 'resolution', 'verified', 'hour', 'weekday', 'music_id'
-]
+# === User Inputs ===
+desc_length = st.slider("Description Length (characters)", 0, 300, 100)
+has_trending_hashtag = st.selectbox("Has Trending Hashtag", [0, 1])
+num_trending_hashtags = st.slider("Number of Trending Hashtags", 0, 10, 1)
+is_trending_music = st.selectbox("Is Using Trending Music", [0, 1])
+has_mention = st.selectbox("Mentions Another User", [0, 1])
+hour_posted = st.slider("Hour of Posting (0–23)", 0, 23, 12)
+video_duration = st.slider("Video Duration (seconds)", 0, 200, 30)
+author_verified = st.selectbox("Author Verified", [0, 1])
+author_signature_len = st.slider("Author Signature Length", 0, 200, 50)
+author_name_len = st.slider("Author Username Length", 0, 100, 10)
+avg_challenge_desc_length = st.slider("Average Challenge Description Length", 0, 300, 50)
+num_challenges = st.slider("Number of Challenges", 0, 100, 10)
+challenge_completeness = st.slider("Challenge Completeness (0.0 - 1.0)", 0.0, 1.0, 0.5, step=0.01)
 
-# Create input row with default 0s
-input_data = pd.DataFrame(np.zeros((1, len(all_features))), columns=all_features)
+# === Create input DataFrame ===
+input_df = pd.DataFrame([[
+    desc_length,
+    has_trending_hashtag,
+    num_trending_hashtags,
+    is_trending_music,
+    has_mention,
+    hour_posted,
+    video_duration,
+    author_verified,
+    author_signature_len,
+    author_name_len,
+    avg_challenge_desc_length,
+    num_challenges,
+    challenge_completeness
+]], columns=[
+    "desc_length",
+    "has_trending_hashtag",
+    "num_trending_hashtags",
+    "is_trending_music",
+    "has_mention",
+    "hour_posted",
+    "video.duration",
+    "author.verified",
+    "author_signature_len",
+    "author_name_len",
+    "avg_challenge_desc_length",
+    "num_challenges",
+    "challenge_completeness"
+])
 
-# Update user-input fields
-input_data['video.duration'] = duration
-input_data['aspect_ratio'] = aspect_ratio
-input_data['verified'] = verified
-input_data['hour'] = hour
-input_data['weekday'] = weekday
+# === Predict and show result ===
+if st.button("Predict Popularity Level"):
+    pred_label_index = model.predict(input_df)[0]
+    pred_label = label_decoder.get(pred_label_index, "Unknown")
 
-# Predict engagement score
-if st.button("Predict Popularity"):
-    # Drop features not seen during model training
-    if 'resolution' in input_data.columns:
-        input_data = input_data.drop(columns=['resolution'])
+    emoji_map = {
+        "low": "😐",
+        "average": "🙂",
+        "popular": "👍",
+        "highly popular": "🔥"
+    }
 
-    prediction = model.predict(input_data)[0]
-
-    # Convert score into categories
-    if prediction >= 0.75:
-        label = "🔥 1"
-    elif prediction >= 0.5:
-        label = "👍 2"
-    elif prediction >= 0.25:
-        label = "🙂 3"
-    else:
-        label = "😐 4"
-
-    st.subheader("Prediction Result")
-    st.write(f"Predicted engagement score: **{round(prediction, 4)}**")
-    st.success(f"Popularity Level: {label}")
+    st.subheader("📊 Prediction Result")
+    st.metric("Predicted Category", f"{pred_label.upper()} {emoji_map.get(pred_label, '')}")
