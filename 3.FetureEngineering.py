@@ -1,80 +1,12 @@
-
-import pandas as pd
-import numpy as np
-from sklearn._selection import mutual_info_regression
-import matplotlib.pyplot as plt
 import ast
 import json
 from collections import Counter
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.feature_selection import mutual_info_regression
 from sklearn.preprocessing import MinMaxScaler
-
-# Load the dataset
-df = pd.read_csv('tiktok_dataset.csv')
-
-print("Available columns:")
-print(df.columns.tolist())
-
-# Prepare features for analysis
-features = [
-    # Primary Author Features
-    'author.verified',
-    'author_signature_len',
-    'author_name_len',    
-    'author_name_len',
-    'avg_challenge_desc_length',
-    'num_challenges',
-    'challenge_completeness'
-]
-
-X = df[features]
-
-# Fill missing values with median
-X = X.fillna(X.median())
-
-# 1. Correlation Analysis
-correlation_matrix = X.corr()
-print("\nFeature Correlations:")
-print(correlation_matrix)
-
-# 2. Mutual Information Analysis between features and challenge_engagement_score
-target = X['challenge_engagement_score']
-features_for_mi = [f for f in features if f != 'challenge_engagement_score']
-X_for_mi = X[features_for_mi]
-
-mi_scores = mutual_info_regression(X_for_mi, target)
-mi_series = pd.Series(mi_scores, index=features_for_mi)
-print("\nMutual Information Scores (with challenge_engagement_score):")
-print(mi_series.sort_values(ascending=False))
-
-# Create visualizations
-plt.figure(figsize=(20, 15))
-
-# Correlation Heatmap
-plt.subplot(2, 1, 1)
-plt.title('Feature Correlation Heatmap')
-
-# Mutual Information Bar Plot
-plt.subplot(2, 1, 2)
-mi_series.sort_values().plot(kind='bar')
-plt.title('Mutual Information Scores (with challenge_engagement_score)')
-plt.xticks(rotation=45, ha='right')
-
-plt.tight_layout()
-plt.savefig('feature_analysis.png')
-plt.close()
-
-# Print top correlated feature pairs
-print("\nTop Correlated Feature Pairs:")
-correlations = []
-for i in range(len(features)):
-    for j in range(i+1, len(features)):
-        corr = abs(correlation_matrix.iloc[i, j])
-        correlations.append((features[i], features[j], corr))
-
-correlations.sort(key=lambda x: abs(x[2]), reverse=True)
-for f1, f2, corr in correlations[:10]:
-    print(f"{f1} - {f2}: {corr:.3f}")
-
 
 # Load preprocessed dataset
 df = pd.read_csv("tiktok_dataset.csv")
@@ -106,11 +38,25 @@ TOP_PERCENT = 0.05
 top_n = max(1, int(len(hashtag_counts) * TOP_PERCENT))
 popular_hashtags = set([tag for tag, _ in hashtag_counts.most_common(top_n)])
 
+
+def count_popular_hashtags(tags):
+    tags_lower = [tag.lower() for tag in tags]
+    num = sum(1 for tag in tags_lower if tag in popular_hashtags)
+    return pd.Series(
+        {"has_trending_hashtag": int(num > 0), "num_trending_hashtags": num}
+    )
+
+
+df[["has_trending_hashtag", "num_trending_hashtags"]] = df["hashtags"].apply(
+    count_popular_hashtags
+)
+
+
 # Feature: is_trending_music(top 5%)
-music_counts = df["music_title"].value_counts()
+music_counts = df["music.title"].value_counts()
 music_top_n = max(1, int(len(music_counts) * TOP_PERCENT))
 popular_music_titles = set(music_counts.head(music_top_n).index)
-df["is_trending_music"] = df["music_title"].apply(
+df["is_trending_music"] = df["music.title"].apply(
     lambda x: int(x in popular_music_titles)
 )
 
@@ -142,20 +88,22 @@ X = df[
         "is_trending_music",
         "has_mention",
         "hour_posted",
-        "video_duration",
-        "verified",
+        "video.duration",
+        "author.verified",
+        "author_signature_len",
+        "author_name_len",
+        "avg_challenge_desc_length",
+        "num_challenges",
+        "challenge_completeness",
     ]
 ]
 
+
 # Replace NaN values in the feature matrix X
-for col in X.select_dtypes(include=["float64", "int64"]).columns:
-    if X[col].isnull().any():
-        mean_value = X[col].mean()
-        X[col].fillna(mean_value, inplace=True)
-for col in X.select_dtypes(include=["object"]).columns:
-    if X[col].isnull().any():
-        mode_value = X[col].mode()[0] if not X[col].mode().empty else ""
-        X[col].fillna(mode_value, inplace=True)
+# if x has catergorical or numeric columns with NaN, fill with median for numeric, and mode for categorical
+# Fill NaN for categorical columns with mode
+X = X.fillna(X.median())
+
 
 # Engagement-related columns
 engagement_cols = [
@@ -209,4 +157,3 @@ y.to_csv("y_target.csv", index=False)
 print("✅")
 print(f"X shape: {X.shape}")
 print(f"y shape: {y.shape}")
-
