@@ -77,6 +77,10 @@ df["has_mention"] = df["textExtra"].apply(has_mention)
 # Feature: hour_posted
 df["hour_posted"] = pd.to_datetime(df["createTime"]).dt.hour
 
+# TODO: Feature: desc
+# Use text embedding technique in text_embedding.py to transform desc into a feature vector
+# Put that vector into X as a feature (Consider flatten the vector to 1D array)
+
 
 # Feature matrix X by return the target variables
 # and keeping only relevant features
@@ -95,14 +99,23 @@ X = df[
         "avg_challenge_desc_length",
         "num_challenges",
         "challenge_completeness",
+        # 'author.signature',
+        # 'author.nickname',
+        # 'desc',
+        # 'challenges',
     ]
 ]
 
 
 # Replace NaN values in the feature matrix X
 # if x has catergorical or numeric columns with NaN, fill with median for numeric, and mode for categorical
-# Fill NaN for categorical columns with mode
-X = X.fillna(X.median())
+for column in X.columns:
+    if X[column].dtype == "object":
+        # For categorical columns, fill with the mode
+        X[column].fillna(X[column].mode()[0], inplace=True)
+    elif X[column].dtype in ["float64", "int64"]:
+        # For numeric columns, fill with the median
+        X[column].fillna(X[column].median(), inplace=True)
 
 
 # Engagement-related columns
