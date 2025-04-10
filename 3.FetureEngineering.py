@@ -50,11 +50,9 @@ def count_popular_hashtags(tags):
         {"has_trending_hashtag": int(num > 0), "num_trending_hashtags": num}
     )
 
-
 df[["has_trending_hashtag", "num_trending_hashtags"]] = df["hashtags"].apply(
     count_popular_hashtags
 )
-
 
 # Feature: is_trending_music(top 5%)
 music_counts = df["music.title"].value_counts()
