@@ -18,14 +18,15 @@ df["desc_length"] = df["desc"].astype(str).apply(len)
 # Feature: has_trending_hashtag / num_trending_hashtags(top 5%)
 def extract_hashtags_from_textExtra(text_extra):
     try:
-        if isinstance(text_extra, str):
-            text_extra = json.loads(text_extra.replace("'", '"'))
+        if pd.isna(text_extra):
+            return []
+        text_extra_parsed = ast.literal_eval(text_extra)
         return [
             tag.get("hashtagName", "").lower()
-            for tag in text_extra
-            if tag.get("type") == 1 and tag.get("hashtagName")
+            for tag in text_extra_parsed
+            if isinstance(tag, dict) and tag.get("type") == 1 and tag.get("hashtagName")
         ]
-    except:
+    except Exception as e:
         return []
 
 
@@ -38,6 +39,9 @@ TOP_PERCENT = 0.05
 top_n = max(1, int(len(hashtag_counts) * TOP_PERCENT))
 popular_hashtags = set([tag for tag, _ in hashtag_counts.most_common(top_n)])
 
+# # Save popular hashtags
+# with open("popular_hashtags.json", "w") as f:
+#     json.dump(list(popular_hashtags), f, ensure_ascii=False, indent=2)
 
 def count_popular_hashtags(tags):
     tags_lower = [tag.lower() for tag in tags]
@@ -46,11 +50,9 @@ def count_popular_hashtags(tags):
         {"has_trending_hashtag": int(num > 0), "num_trending_hashtags": num}
     )
 
-
 df[["has_trending_hashtag", "num_trending_hashtags"]] = df["hashtags"].apply(
     count_popular_hashtags
 )
-
 
 # Feature: is_trending_music(top 5%)
 music_counts = df["music.title"].value_counts()
@@ -60,6 +62,9 @@ df["is_trending_music"] = df["music.title"].apply(
     lambda x: int(x in popular_music_titles)
 )
 
+# # Save popular music
+# with open("popular_music_titles.json", "w") as f:
+#     json.dump(list(popular_music_titles), f, ensure_ascii=False, indent=2)
 
 # Feature: has_mention
 def has_mention(text_extra):
