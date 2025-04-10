@@ -47,21 +47,21 @@ def evaluate_model(model_name, y_true, y_pred):
 # === 4. Initialize and evaluate models ===
 results = []
 
-## 1. gradient boosting classifier
-from sklearn.ensemble import GradientBoostingClassifier
+# ## 1. gradient boosting classifier
+# from sklearn.ensemble import GradientBoostingClassifier
 
-gb_model = GradientBoostingClassifier(random_state=42)
-gb_model.fit(X_train, y_train.values.ravel())  # ravel to convert y_train to 1D array
-y_pred_gb = gb_model.predict(X_test)
-results.append(evaluate_model("Gradient Boosting Classifier", y_test, y_pred_gb))
+# gb_model = GradientBoostingClassifier(random_state=42)
+# gb_model.fit(X_train, y_train)  # ravel to convert y_train to 1D array
+# y_pred_gb = gb_model.predict(X_test)
+# results.append(evaluate_model("Gradient Boosting Classifier", y_test, y_pred_gb))
 
-## 2. Random Forest Classifier
-from sklearn.ensemble import RandomForestClassifier
+# ## 2. Random Forest Classifier
+# from sklearn.ensemble import RandomForestClassifier
 
-rf_model = RandomForestClassifier(random_state=42, n_estimators=100)
-rf_model.fit(X_train, y_train.values.ravel())  # ravel to convert y_train to 1D array
-y_pred_rf = rf_model.predict(X_test)
-results.append(evaluate_model("Random Forest Classifier", y_test, y_pred_rf))
+# rf_model = RandomForestClassifier(random_state=42, n_estimators=100)
+# rf_model.fit(X_train, y_train)  # ravel to convert y_train to 1D array
+# y_pred_rf = rf_model.predict(X_test)
+# results.append(evaluate_model("Random Forest Classifier", y_test, y_pred_rf))
 
 ## 3. XGBoost Classifier
 from xgboost import XGBClassifier
@@ -69,7 +69,7 @@ from xgboost import XGBClassifier
 xgb_model = XGBClassifier(
     random_state=42, use_label_encoder=False, eval_metric="mlogloss"
 )
-xgb_model.fit(X_train, y_train.values.ravel())  # ravel to convert y_train to 1D array
+xgb_model.fit(X_train, y_train)  # ravel to convert y_train to 1D array
 
 # Save the model to pickle file
 with open("model.pkl", "wb") as f:
