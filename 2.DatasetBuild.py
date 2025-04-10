@@ -12,7 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 # Load and flatten JSON
-with open('subset.json', 'r') as f:
+with open('subset_10000.json', 'r') as f:
     data = json.load(f)
 
 # filter out all secret videos
