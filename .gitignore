@@ -3,3 +3,4 @@
 .venv
 *.jsonl
 .DS_Store
+__pycache__/
