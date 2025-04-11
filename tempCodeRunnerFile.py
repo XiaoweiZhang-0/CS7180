@@ -85,17 +85,14 @@ df["has_mention"] = df["textExtra"].apply(has_mention)
 # Feature: hour_posted
 df["hour_posted"] = pd.to_datetime(df["createTime"]).dt.hour
 
-# Feature: desc
+# TODO: Feature: desc
 # Use text embedding technique in text_embedding.py to transform desc into a feature vector
-
-## tfidf
 # tfidf_matrix = tf_idf("subset_10000.json") # Implement on subset to explore data
 # tfidf_df = pd.DataFrame(
 #     tfidf_matrix.toarray(),
 #     columns=[f"tfidf_{i}" for i in range(tfidf_matrix.shape[1])]
 # )
 
-# bert
 bert_matrix = bert("subset_10000.json")
 bert_df = pd.DataFrame(
     bert_matrix,
@@ -130,11 +127,7 @@ X = df[
 ]
 
 # Put that vector into X as a feature (Consider flatten the vector to 1D array)
-
-## tfidf 
 # X = pd.concat([X.reset_index(drop=True), tfidf_df.reset_index(drop=True)], axis=1)
-
-# bert
 X = pd.concat([X.reset_index(drop=True), bert_df.reset_index(drop=True)], axis=1)
 
 
