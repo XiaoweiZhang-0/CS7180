@@ -4,23 +4,21 @@ import pandas as pd
 from sklearn.calibration import LabelEncoder
 from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
+from scipy.sparse import load_npz
+import numpy as np
 
 # === 1. Load dataset ===
-# df = pd.read_csv('tiktok_dataset_with_engagement_score.csv')
 
-X = pd.read_csv("X_features.csv")
+# X = pd.read_csv("X_features.csv")
+# X = load_npz("X.npz")
 y = pd.read_csv("y_target.csv")
+X = np.load('X.npy')
 
 
 le = LabelEncoder()
 y["engagement_category"] = le.fit_transform(
     y["engagement_category"]
 )  # Ensure y is encoded if categorical
-
-# Remove 'resolution' column as it contains non-numeric values ('720p', '480p')
-if "resolution" in X.columns:
-    X = X.drop(columns=["resolution"])
-    print("Removed 'resolution' column")
 
 # Convert y to a 1D array
 y = y.values.ravel()
@@ -77,4 +75,4 @@ with open("model.pkl", "wb") as f:
 
 print("✅ Model has been saved to model.pkl")
 
-results.append(evaluate_model("StackingRegressor", y_test, xgb_model.predict(X_test)))
+results.append(evaluate_model("XGB", y_test, xgb_model.predict(X_test)))

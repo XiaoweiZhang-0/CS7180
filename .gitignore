@@ -4,3 +4,6 @@
 *.jsonl
 .DS_Store
 __pycache__/
+*.npz
+*.npy
+*.pkl

@@ -7,8 +7,12 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.preprocessing import MinMaxScaler
+from scipy.sparse import csr_matrix
+from scipy.sparse import hstack
+from numpy import hstack as np_hstack
+from scipy.sparse import save_npz
 
-from text_embedding import tf_idf
+from text_embedding import bert, tf_idf
 
 # Load preprocessed dataset
 df = pd.read_csv("tiktok_dataset.csv")
@@ -84,17 +88,48 @@ df["has_mention"] = df["textExtra"].apply(has_mention)
 # Feature: hour_posted
 df["hour_posted"] = pd.to_datetime(df["createTime"]).dt.hour
 
-# TODO: Feature: desc
+
 # Use text embedding technique in text_embedding.py to transform desc into a feature vector
-tfidf_matrix = tf_idf("subset_10000.json") # Implement on subset to explore data
-tfidf_df = pd.DataFrame(
-    tfidf_matrix.toarray(),
-    columns=[f"tfidf_{i}" for i in range(tfidf_matrix.shape[1])]
+# tfidf_matrix_desc = tf_idf("subset_10000.json", "desc") # Implement on subset to explore data
+# tf_idf_matrix_author_signature = tf_idf(
+#     "subset_10000.json", "author.signature"
+# )  # Implement on subset to explore data
+# tf_idf_matrix_author_nickname = tf_idf(
+#     "subset_10000.json", "author.nickname"
+# )  # Implement on subset to explore data
+# tf_idf_matrix_challenges = tf_idf(
+#     "subset_10000.json", "challenges"
+# )  # Implement on subset to explore data
+# # merge the four matrices
+# tfidf_matrix = hstack(
+#     [
+#         tfidf_matrix_desc,
+#         tf_idf_matrix_author_signature,
+#         tf_idf_matrix_author_nickname,
+#         tf_idf_matrix_challenges,
+#     ]
+# )
+
+bert_matrix_desc = bert("subset_10000.json", "desc") # Implement on subset to explore data
+bert_matrix_author_signature = bert(
+    "subset_10000.json", "author.signature"
+)  # Implement on subset to explore data
+bert_matrix_author_nickname = bert(
+    "subset_10000.json", "author.nickname"
+)  # Implement on subset to explore data
+bert_matrix_challenges = bert(  
+    "subset_10000.json", "challenges"
+)  # Implement on subset to explore data
+
+# merge the four matrices
+bert_matrix = np_hstack(
+    [
+        bert_matrix_desc,
+        bert_matrix_author_signature,
+        bert_matrix_author_nickname,
+        bert_matrix_challenges,
+    ]
 )
-
-# Put that vector into X as a feature (Consider flatten the vector to 1D array)
-
-
 
 # Feature matrix X by return the target variables
 # and keeping only relevant features
@@ -113,15 +148,8 @@ X = df[
         "avg_challenge_desc_length",
         "num_challenges",
         "challenge_completeness",
-        # 'author.signature',
-        # 'author.nickname',
-        # 'desc',
-        # 'challenges',
     ]
 ]
-
-X = pd.concat([X.reset_index(drop=True), tfidf_df.reset_index(drop=True)], axis=1)
-
 # Replace NaN values in the feature matrix X
 # if x has catergorical or numeric columns with NaN, fill with median for numeric, and mode for categorical
 for column in X.columns:
@@ -131,6 +159,13 @@ for column in X.columns:
     elif X[column].dtype in ["float64", "int64"]:
         # For numeric columns, fill with the median
         X[column].fillna(X[column].median(), inplace=True)
+X_sparse = csr_matrix(X)
+# X = hstack([tfidf_matrix, X_sparse])
+X = np_hstack([X, bert_matrix])
+
+# X = pd.concat([X.reset_index(drop=True), tfidf_df.reset_index(drop=True)], axis=1)
+
+
 
 
 # Engagement-related columns
@@ -178,8 +213,11 @@ df["engagement_category"] = pd.cut(
 y = df["engagement_category"].astype(str)  # Convert to string for classification
 
 # Save updated dataset with engagement score
-df.to_csv("tiktok_dataset_with_engagement_score.csv", index=False)
-X.to_csv("X_features.csv", index=False)
+# df.to_csv("tiktok_dataset_with_engagement_score.csv", index=False)
+# X.to_csv("X_features.csv", index=False)
+# save_npz('X.npz', X)
+np.save('X.npy', X)
+
 y.to_csv("y_target.csv", index=False)
 
 print("✅")
