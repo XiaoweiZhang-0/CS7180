@@ -111,23 +111,26 @@ with col1:
         if mentions:
             st.write("  " + " ".join([f"@{mention}" for mention in mentions]))
     
-    # Video duration
-    video_duration = st.slider(
-        "Video Duration (seconds)", 
-        min_value=1, 
-        max_value=60, 
-        value=15,
-        help="Duration of your video in seconds"
-    )
-    
-    # Posting time
-    hour_posted = st.slider(
-        "Hour of Posting (0-23)", 
-        min_value=0, 
-        max_value=23, 
-        value=18,
-        help="Hour of the day when you plan to post the video (0 = midnight, 12 = noon, 18 = 6 PM)"
-    )
+    # Combine video duration and posting time in one row
+    duration_col, time_col = st.columns(2)
+
+    with duration_col:
+        video_duration = st.number_input(
+            "Video Duration (seconds)", 
+            min_value=1, 
+            max_value=600, 
+            value=15,
+            help="Duration of your video in seconds"
+        )
+
+    with time_col:
+        posting_time = st.time_input(
+            "Planned Posting Time", 
+            value=pd.to_datetime("18:00").time(),
+            help="Select the time of day when you plan to post the video"
+        )
+        hour_posted = posting_time.hour
+
     
     # Challenges section
     st.header("🎯 Video Challenges")
